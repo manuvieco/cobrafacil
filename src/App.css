@@ -644,3 +644,25 @@ td {
     width: 100%;
   }
 }
+.campo-formulario select {
+  width: 100%;
+  border: 1px solid #ddd6fe;
+  border-radius: 9px;
+  padding: 12px 13px;
+  outline: none;
+  background: #ffffff;
+  color: #1f2937;
+  font: inherit;
+  cursor: pointer;
+}
+
+.campo-formulario select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.tabela-vazia {
+  padding: 30px !important;
+  color: #6b7280;
+  text-align: center;
+}

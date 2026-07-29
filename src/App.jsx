@@ -1,63 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import './App.css'
 
-const resumoFinanceiro = [
-  {
-    titulo: 'Total em cobranças',
-    valor: 'R$ 12.500,00',
-    classe: 'total',
-  },
-  {
-    titulo: 'Total recebido',
-    valor: 'R$ 7.800,00',
-    classe: 'recebido',
-  },
-  {
-    titulo: 'Total pendente',
-    valor: 'R$ 3.200,00',
-    classe: 'pendente',
-  },
-  {
-    titulo: 'Total vencido',
-    valor: 'R$ 1.500,00',
-    classe: 'vencido',
-  },
-]
-
-const cobrancasRecentes = [
-  {
-    id: 1,
-    cliente: 'Ana Oliveira',
-    descricao: 'Mensalidade de julho',
-    valor: 'R$ 350,00',
-    vencimento: '10/07/2026',
-    situacao: 'Pendente',
-  },
-  {
-    id: 2,
-    cliente: 'Carlos Souza',
-    descricao: 'Parcela do acordo',
-    valor: 'R$ 520,00',
-    vencimento: '15/07/2026',
-    situacao: 'Paga',
-  },
-  {
-    id: 3,
-    cliente: 'Mariana Santos',
-    descricao: 'Mensalidade de junho',
-    valor: 'R$ 290,00',
-    vencimento: '05/06/2026',
-    situacao: 'Vencida',
-  },
-  {
-    id: 4,
-    cliente: 'Lucas Almeida',
-    descricao: 'Taxa de serviço',
-    valor: 'R$ 180,00',
-    vencimento: '25/07/2026',
-    situacao: 'Pendente',
-  },
-]
+const CHAVE_CLIENTES = 'cobrafacil_clientes'
+const CHAVE_COBRANCAS = 'cobrafacil_cobrancas'
 
 const clientesIniciais = [
   {
@@ -94,6 +39,41 @@ const clientesIniciais = [
   },
 ]
 
+const cobrancasIniciais = [
+  {
+    id: 1,
+    clienteId: 1,
+    descricao: 'Mensalidade de julho',
+    valor: 350,
+    vencimento: '2026-07-10',
+    situacao: 'Pendente',
+  },
+  {
+    id: 2,
+    clienteId: 2,
+    descricao: 'Parcela do acordo',
+    valor: 520,
+    vencimento: '2026-07-15',
+    situacao: 'Paga',
+  },
+  {
+    id: 3,
+    clienteId: 3,
+    descricao: 'Mensalidade de junho',
+    valor: 290,
+    vencimento: '2026-06-05',
+    situacao: 'Vencida',
+  },
+  {
+    id: 4,
+    clienteId: 4,
+    descricao: 'Taxa de serviço',
+    valor: 180,
+    vencimento: '2026-07-25',
+    situacao: 'Pendente',
+  },
+]
+
 const clienteVazio = {
   nome: '',
   documento: '',
@@ -101,17 +81,74 @@ const clienteVazio = {
   email: '',
 }
 
+const cobrancaVazia = {
+  clienteId: '',
+  descricao: '',
+  valor: '',
+  vencimento: '',
+  situacao: 'Pendente',
+}
+
 const nomesDasTelas = {
-  cobrancas: 'Cobranças',
   pagamentos: 'Pagamentos',
   relatorios: 'Relatórios',
 }
 
+function carregarDados(chave, dadosIniciais) {
+  const dadosSalvos = localStorage.getItem(chave)
+
+  if (!dadosSalvos) {
+    return dadosIniciais
+  }
+
+  try {
+    const dadosConvertidos = JSON.parse(dadosSalvos)
+
+    return Array.isArray(dadosConvertidos)
+      ? dadosConvertidos
+      : dadosIniciais
+  } catch {
+    return dadosIniciais
+  }
+}
+
+function formatarMoeda(valor) {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(Number(valor) || 0)
+}
+
+function formatarData(data) {
+  if (!data) {
+    return '-'
+  }
+
+  const [ano, mes, dia] = data.split('-')
+
+  return `${dia}/${mes}/${ano}`
+}
+
 function App() {
   const [telaAtual, setTelaAtual] = useState('painel')
-  const [clientes, setClientes] = useState(clientesIniciais)
-  const [mostrarFormulario, setMostrarFormulario] = useState(false)
+
+  const [clientes, setClientes] = useState(() =>
+    carregarDados(CHAVE_CLIENTES, clientesIniciais),
+  )
+
+  const [cobrancas, setCobrancas] = useState(() =>
+    carregarDados(CHAVE_COBRANCAS, cobrancasIniciais),
+  )
+
+  const [mostrarFormularioCliente, setMostrarFormularioCliente] =
+    useState(false)
+
+  const [mostrarFormularioCobranca, setMostrarFormularioCobranca] =
+    useState(false)
+
   const [novoCliente, setNovoCliente] = useState(clienteVazio)
+  const [novaCobranca, setNovaCobranca] = useState(cobrancaVazia)
+
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
   const [clienteSelecionado, setClienteSelecionado] = useState(null)
 
@@ -119,6 +156,26 @@ function App() {
     tipo: '',
     texto: '',
   })
+
+  useEffect(() => {
+    localStorage.setItem(
+      CHAVE_CLIENTES,
+      JSON.stringify(clientes),
+    )
+  }, [clientes])
+
+  useEffect(() => {
+    localStorage.setItem(
+      CHAVE_COBRANCAS,
+      JSON.stringify(cobrancas),
+    )
+  }, [cobrancas])
+
+  const cobrancasOrdenadas = [...cobrancas].sort(
+    (primeira, segunda) => segunda.id - primeira.id,
+  )
+
+  const cobrancasRecentes = cobrancasOrdenadas.slice(0, 4)
 
   function limparMensagem() {
     setMensagem({
@@ -129,25 +186,41 @@ function App() {
 
   function mudarTela(tela) {
     setTelaAtual(tela)
-    setMostrarFormulario(false)
+
+    setMostrarFormularioCliente(false)
+    setMostrarFormularioCobranca(false)
+
     setClienteEmEdicao(null)
     setClienteSelecionado(null)
+
     setNovoCliente(clienteVazio)
+    setNovaCobranca(cobrancaVazia)
+
     limparMensagem()
+  }
+
+  function buscarNomeCliente(clienteId) {
+    const clienteEncontrado = clientes.find(
+      (cliente) => String(cliente.id) === String(clienteId),
+    )
+
+    return clienteEncontrado
+      ? clienteEncontrado.nome
+      : 'Cliente não encontrado'
   }
 
   function abrirFormularioCliente() {
     setNovoCliente(clienteVazio)
     setClienteEmEdicao(null)
     setClienteSelecionado(null)
-    setMostrarFormulario(true)
+    setMostrarFormularioCliente(true)
     limparMensagem()
   }
 
   function fecharFormularioCliente() {
     setNovoCliente(clienteVazio)
     setClienteEmEdicao(null)
-    setMostrarFormulario(false)
+    setMostrarFormularioCliente(false)
     limparMensagem()
   }
 
@@ -178,7 +251,7 @@ function App() {
 
     setClienteEmEdicao(cliente.id)
     setClienteSelecionado(null)
-    setMostrarFormulario(true)
+    setMostrarFormularioCliente(true)
     limparMensagem()
 
     window.scrollTo({
@@ -196,6 +269,21 @@ function App() {
   }
 
   function excluirCliente(cliente) {
+    const possuiCobranca = cobrancas.some(
+      (cobranca) =>
+        String(cobranca.clienteId) === String(cliente.id),
+    )
+
+    if (possuiCobranca) {
+      setMensagem({
+        tipo: 'erro',
+        texto:
+          'Este cliente possui cobranças cadastradas e não pode ser excluído.',
+      })
+
+      return
+    }
+
     const confirmouExclusao = window.confirm(
       `Deseja realmente excluir o cliente ${cliente.nome}?`,
     )
@@ -213,7 +301,7 @@ function App() {
     if (clienteEmEdicao === cliente.id) {
       setNovoCliente(clienteVazio)
       setClienteEmEdicao(null)
-      setMostrarFormulario(false)
+      setMostrarFormularioCliente(false)
     }
 
     if (clienteSelecionado?.id === cliente.id) {
@@ -287,7 +375,97 @@ function App() {
 
     setNovoCliente(clienteVazio)
     setClienteEmEdicao(null)
-    setMostrarFormulario(false)
+    setMostrarFormularioCliente(false)
+  }
+
+  function abrirFormularioCobranca() {
+    setTelaAtual('cobrancas')
+    setNovaCobranca(cobrancaVazia)
+    setMostrarFormularioCliente(false)
+    setMostrarFormularioCobranca(true)
+    limparMensagem()
+  }
+
+  function fecharFormularioCobranca() {
+    setNovaCobranca(cobrancaVazia)
+    setMostrarFormularioCobranca(false)
+    limparMensagem()
+  }
+
+  function atualizarCampoCobranca(evento) {
+    const { name, value } = evento.target
+
+    setNovaCobranca((dadosAtuais) => ({
+      ...dadosAtuais,
+      [name]: value,
+    }))
+  }
+
+  function salvarCobranca(evento) {
+    evento.preventDefault()
+
+    const valorConvertido = Number(novaCobranca.valor)
+
+    const formularioIncompleto =
+      !novaCobranca.clienteId ||
+      !novaCobranca.descricao.trim() ||
+      !novaCobranca.valor ||
+      !novaCobranca.vencimento ||
+      !novaCobranca.situacao
+
+    if (formularioIncompleto) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'Preencha todos os campos da cobrança.',
+      })
+
+      return
+    }
+
+    if (valorConvertido <= 0) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'O valor da cobrança deve ser maior que zero.',
+      })
+
+      return
+    }
+
+    const clienteExiste = clientes.some(
+      (cliente) =>
+        String(cliente.id) === String(novaCobranca.clienteId),
+    )
+
+    if (!clienteExiste) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'Selecione um cliente válido.',
+      })
+
+      return
+    }
+
+    const cobrancaCadastrada = {
+      id: Date.now(),
+      clienteId: Number(novaCobranca.clienteId),
+      descricao: novaCobranca.descricao.trim(),
+      valor: valorConvertido,
+      vencimento: novaCobranca.vencimento,
+      situacao: novaCobranca.situacao,
+    }
+
+    setCobrancas((cobrancasAtuais) => [
+      ...cobrancasAtuais,
+      cobrancaCadastrada,
+    ])
+
+    setNovaCobranca(cobrancaVazia)
+    setMostrarFormularioCobranca(false)
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Cobrança cadastrada com sucesso!',
+    })
   }
 
   return (
@@ -376,22 +554,32 @@ function App() {
               <button
                 type="button"
                 className="botao-principal"
-                onClick={() => mudarTela('cobrancas')}
+                onClick={abrirFormularioCobranca}
               >
                 Nova cobrança
               </button>
             </header>
 
             <section className="resumo">
-              {resumoFinanceiro.map((item) => (
-                <article
-                  className={`cartao ${item.classe}`}
-                  key={item.titulo}
-                >
-                  <span>{item.titulo}</span>
-                  <strong>{item.valor}</strong>
-                </article>
-              ))}
+              <article className="cartao total">
+                <span>Total em cobranças</span>
+                <strong>R$ 12.500,00</strong>
+              </article>
+
+              <article className="cartao recebido">
+                <span>Total recebido</span>
+                <strong>R$ 7.800,00</strong>
+              </article>
+
+              <article className="cartao pendente">
+                <span>Total pendente</span>
+                <strong>R$ 3.200,00</strong>
+              </article>
+
+              <article className="cartao vencido">
+                <span>Total vencido</span>
+                <strong>R$ 1.500,00</strong>
+              </article>
             </section>
 
             <section className="secao-tabela">
@@ -428,10 +616,13 @@ function App() {
                   <tbody>
                     {cobrancasRecentes.map((cobranca) => (
                       <tr key={cobranca.id}>
-                        <td>{cobranca.cliente}</td>
+                        <td>
+                          {buscarNomeCliente(cobranca.clienteId)}
+                        </td>
+
                         <td>{cobranca.descricao}</td>
-                        <td>{cobranca.valor}</td>
-                        <td>{cobranca.vencimento}</td>
+                        <td>{formatarMoeda(cobranca.valor)}</td>
+                        <td>{formatarData(cobranca.vencimento)}</td>
 
                         <td>
                           <span
@@ -442,6 +633,14 @@ function App() {
                         </td>
                       </tr>
                     ))}
+
+                    {cobrancasRecentes.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="tabela-vazia">
+                          Nenhuma cobrança cadastrada.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -474,7 +673,7 @@ function App() {
               </div>
             )}
 
-            {mostrarFormulario && (
+            {mostrarFormularioCliente && (
               <section className="formulario-card">
                 <div className="formulario-cabecalho">
                   <h3>
@@ -644,6 +843,232 @@ function App() {
                         </td>
                       </tr>
                     ))}
+
+                    {clientes.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="tabela-vazia">
+                          Nenhum cliente cadastrado.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {telaAtual === 'cobrancas' && (
+          <>
+            <header className="cabecalho">
+              <div>
+                <p className="saudacao">Gerenciamento</p>
+                <h2>Cobranças</h2>
+              </div>
+
+              <button
+                type="button"
+                className="botao-principal"
+                onClick={abrirFormularioCobranca}
+              >
+                Nova cobrança
+              </button>
+            </header>
+
+            {mensagem.texto && (
+              <div
+                className={`mensagem-formulario ${mensagem.tipo}`}
+              >
+                {mensagem.texto}
+              </div>
+            )}
+
+            {mostrarFormularioCobranca && (
+              <section className="formulario-card">
+                <div className="formulario-cabecalho">
+                  <h3>Cadastrar cobrança</h3>
+
+                  <p>
+                    Selecione o cliente e informe os dados da
+                    cobrança.
+                  </p>
+                </div>
+
+                {clientes.length === 0 ? (
+                  <div className="mensagem-formulario erro">
+                    Cadastre pelo menos um cliente antes de criar uma
+                    cobrança.
+                  </div>
+                ) : (
+                  <form onSubmit={salvarCobranca}>
+                    <div className="formulario-grid">
+                      <label className="campo-formulario">
+                        <span>Cliente</span>
+
+                        <select
+                          name="clienteId"
+                          value={novaCobranca.clienteId}
+                          onChange={atualizarCampoCobranca}
+                          required
+                        >
+                          <option value="">
+                            Selecione um cliente
+                          </option>
+
+                          {clientes.map((cliente) => (
+                            <option
+                              key={cliente.id}
+                              value={cliente.id}
+                            >
+                              {cliente.nome}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Descrição</span>
+
+                        <input
+                          type="text"
+                          name="descricao"
+                          value={novaCobranca.descricao}
+                          onChange={atualizarCampoCobranca}
+                          placeholder="Ex.: Mensalidade de agosto"
+                          required
+                        />
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Valor em reais</span>
+
+                        <input
+                          type="number"
+                          name="valor"
+                          value={novaCobranca.valor}
+                          onChange={atualizarCampoCobranca}
+                          placeholder="350,00"
+                          min="0.01"
+                          step="0.01"
+                          required
+                        />
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Data de vencimento</span>
+
+                        <input
+                          type="date"
+                          name="vencimento"
+                          value={novaCobranca.vencimento}
+                          onChange={atualizarCampoCobranca}
+                          required
+                        />
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Situação</span>
+
+                        <select
+                          name="situacao"
+                          value={novaCobranca.situacao}
+                          onChange={atualizarCampoCobranca}
+                          required
+                        >
+                          <option value="Pendente">
+                            Pendente
+                          </option>
+
+                          <option value="Paga">Paga</option>
+
+                          <option value="Vencida">
+                            Vencida
+                          </option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <div className="formulario-acoes">
+                      <button
+                        type="button"
+                        className="botao-cancelar"
+                        onClick={fecharFormularioCobranca}
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="botao-principal"
+                      >
+                        Salvar cobrança
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
+            )}
+
+            <section className="secao-tabela">
+              <div className="titulo-secao">
+                <div>
+                  <h3>Cobranças cadastradas</h3>
+
+                  <p>
+                    Consulte as cobranças registradas no sistema.
+                  </p>
+                </div>
+
+                <span className="contador-clientes">
+                  {cobrancas.length}{' '}
+                  {cobrancas.length === 1
+                    ? 'cobrança'
+                    : 'cobranças'}
+                </span>
+              </div>
+
+              <div className="tabela-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Descrição</th>
+                      <th>Valor</th>
+                      <th>Vencimento</th>
+                      <th>Situação</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {cobrancasOrdenadas.map((cobranca) => (
+                      <tr key={cobranca.id}>
+                        <td>
+                          <strong>
+                            {buscarNomeCliente(cobranca.clienteId)}
+                          </strong>
+                        </td>
+
+                        <td>{cobranca.descricao}</td>
+                        <td>{formatarMoeda(cobranca.valor)}</td>
+                        <td>{formatarData(cobranca.vencimento)}</td>
+
+                        <td>
+                          <span
+                            className={`status ${cobranca.situacao.toLowerCase()}`}
+                          >
+                            {cobranca.situacao}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {cobrancas.length === 0 && (
+                      <tr>
+                        <td colSpan="5" className="tabela-vazia">
+                          Nenhuma cobrança cadastrada.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
