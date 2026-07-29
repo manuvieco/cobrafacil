@@ -112,36 +112,40 @@ function App() {
   const [clientes, setClientes] = useState(clientesIniciais)
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
   const [novoCliente, setNovoCliente] = useState(clienteVazio)
+  const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
+
   const [mensagem, setMensagem] = useState({
     tipo: '',
     texto: '',
   })
 
-  function mudarTela(tela) {
-    setTelaAtual(tela)
-    setMostrarFormulario(false)
+  function limparMensagem() {
     setMensagem({
       tipo: '',
       texto: '',
     })
+  }
+
+  function mudarTela(tela) {
+    setTelaAtual(tela)
+    setMostrarFormulario(false)
+    setClienteEmEdicao(null)
+    setNovoCliente(clienteVazio)
+    limparMensagem()
   }
 
   function abrirFormularioCliente() {
     setNovoCliente(clienteVazio)
+    setClienteEmEdicao(null)
     setMostrarFormulario(true)
-    setMensagem({
-      tipo: '',
-      texto: '',
-    })
+    limparMensagem()
   }
 
   function fecharFormularioCliente() {
     setNovoCliente(clienteVazio)
+    setClienteEmEdicao(null)
     setMostrarFormulario(false)
-    setMensagem({
-      tipo: '',
-      texto: '',
-    })
+    limparMensagem()
   }
 
   function atualizarCampoCliente(evento) {
@@ -153,7 +157,25 @@ function App() {
     }))
   }
 
-  function cadastrarCliente(evento) {
+  function editarCliente(cliente) {
+    setNovoCliente({
+      nome: cliente.nome,
+      documento: cliente.documento,
+      telefone: cliente.telefone,
+      email: cliente.email,
+    })
+
+    setClienteEmEdicao(cliente.id)
+    setMostrarFormulario(true)
+    limparMensagem()
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  function salvarCliente(evento) {
     evento.preventDefault()
 
     const formularioIncompleto =
@@ -171,27 +193,50 @@ function App() {
       return
     }
 
-    const clienteCadastrado = {
-      id: Date.now(),
+    const dadosDoCliente = {
       nome: novoCliente.nome.trim(),
       documento: novoCliente.documento.trim(),
       telefone: novoCliente.telefone.trim(),
       email: novoCliente.email.trim(),
-      situacao: 'Ativo',
     }
 
-    setClientes((clientesAtuais) => [
-      ...clientesAtuais,
-      clienteCadastrado,
-    ])
+    if (clienteEmEdicao !== null) {
+      setClientes((clientesAtuais) =>
+        clientesAtuais.map((cliente) =>
+          cliente.id === clienteEmEdicao
+            ? {
+                ...cliente,
+                ...dadosDoCliente,
+              }
+            : cliente,
+        ),
+      )
+
+      setMensagem({
+        tipo: 'sucesso',
+        texto: 'Cliente atualizado com sucesso!',
+      })
+    } else {
+      const clienteCadastrado = {
+        id: Date.now(),
+        ...dadosDoCliente,
+        situacao: 'Ativo',
+      }
+
+      setClientes((clientesAtuais) => [
+        ...clientesAtuais,
+        clienteCadastrado,
+      ])
+
+      setMensagem({
+        tipo: 'sucesso',
+        texto: 'Cliente cadastrado com sucesso!',
+      })
+    }
 
     setNovoCliente(clienteVazio)
+    setClienteEmEdicao(null)
     setMostrarFormulario(false)
-
-    setMensagem({
-      tipo: 'sucesso',
-      texto: 'Cliente cadastrado com sucesso!',
-    })
   }
 
   return (
@@ -371,14 +416,21 @@ function App() {
               <section className="formulario-card">
                 <div className="formulario-cabecalho">
                   <div>
-                    <h3>Cadastrar cliente</h3>
+                    <h3>
+                      {clienteEmEdicao !== null
+                        ? 'Editar cliente'
+                        : 'Cadastrar cliente'}
+                    </h3>
+
                     <p>
-                      Preencha os dados para adicionar um novo cliente.
+                      {clienteEmEdicao !== null
+                        ? 'Altere os dados do cliente selecionado.'
+                        : 'Preencha os dados para adicionar um novo cliente.'}
                     </p>
                   </div>
                 </div>
 
-                <form onSubmit={cadastrarCliente}>
+                <form onSubmit={salvarCliente}>
                   <div className="formulario-grid">
                     <label className="campo-formulario">
                       <span>Nome completo</span>
@@ -446,7 +498,9 @@ function App() {
                       type="submit"
                       className="botao-principal"
                     >
-                      Salvar cliente
+                      {clienteEmEdicao !== null
+                        ? 'Salvar alterações'
+                        : 'Salvar cliente'}
                     </button>
                   </div>
                 </form>
@@ -501,11 +555,18 @@ function App() {
 
                         <td>
                           <div className="acoes">
-                            <button className="botao-acao">
+                            <button
+                              type="button"
+                              className="botao-acao"
+                            >
                               Ver
                             </button>
 
-                            <button className="botao-acao">
+                            <button
+                              type="button"
+                              className="botao-acao"
+                              onClick={() => editarCliente(cliente)}
+                            >
                               Editar
                             </button>
                           </div>
