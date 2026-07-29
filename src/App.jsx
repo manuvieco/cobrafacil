@@ -59,7 +59,7 @@ const cobrancasRecentes = [
   },
 ]
 
-const clientes = [
+const clientesIniciais = [
   {
     id: 1,
     nome: 'Ana Oliveira',
@@ -94,6 +94,13 @@ const clientes = [
   },
 ]
 
+const clienteVazio = {
+  nome: '',
+  documento: '',
+  telefone: '',
+  email: '',
+}
+
 const nomesDasTelas = {
   cobrancas: 'Cobranças',
   pagamentos: 'Pagamentos',
@@ -102,6 +109,90 @@ const nomesDasTelas = {
 
 function App() {
   const [telaAtual, setTelaAtual] = useState('painel')
+  const [clientes, setClientes] = useState(clientesIniciais)
+  const [mostrarFormulario, setMostrarFormulario] = useState(false)
+  const [novoCliente, setNovoCliente] = useState(clienteVazio)
+  const [mensagem, setMensagem] = useState({
+    tipo: '',
+    texto: '',
+  })
+
+  function mudarTela(tela) {
+    setTelaAtual(tela)
+    setMostrarFormulario(false)
+    setMensagem({
+      tipo: '',
+      texto: '',
+    })
+  }
+
+  function abrirFormularioCliente() {
+    setNovoCliente(clienteVazio)
+    setMostrarFormulario(true)
+    setMensagem({
+      tipo: '',
+      texto: '',
+    })
+  }
+
+  function fecharFormularioCliente() {
+    setNovoCliente(clienteVazio)
+    setMostrarFormulario(false)
+    setMensagem({
+      tipo: '',
+      texto: '',
+    })
+  }
+
+  function atualizarCampoCliente(evento) {
+    const { name, value } = evento.target
+
+    setNovoCliente((dadosAtuais) => ({
+      ...dadosAtuais,
+      [name]: value,
+    }))
+  }
+
+  function cadastrarCliente(evento) {
+    evento.preventDefault()
+
+    const formularioIncompleto =
+      !novoCliente.nome.trim() ||
+      !novoCliente.documento.trim() ||
+      !novoCliente.telefone.trim() ||
+      !novoCliente.email.trim()
+
+    if (formularioIncompleto) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'Preencha todos os campos antes de salvar.',
+      })
+
+      return
+    }
+
+    const clienteCadastrado = {
+      id: Date.now(),
+      nome: novoCliente.nome.trim(),
+      documento: novoCliente.documento.trim(),
+      telefone: novoCliente.telefone.trim(),
+      email: novoCliente.email.trim(),
+      situacao: 'Ativo',
+    }
+
+    setClientes((clientesAtuais) => [
+      ...clientesAtuais,
+      clienteCadastrado,
+    ])
+
+    setNovoCliente(clienteVazio)
+    setMostrarFormulario(false)
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Cliente cadastrado com sucesso!',
+    })
+  }
 
   return (
     <div className="app">
@@ -120,7 +211,7 @@ function App() {
             className={`menu-item ${
               telaAtual === 'painel' ? 'ativo' : ''
             }`}
-            onClick={() => setTelaAtual('painel')}
+            onClick={() => mudarTela('painel')}
           >
             Painel
           </button>
@@ -129,7 +220,7 @@ function App() {
             className={`menu-item ${
               telaAtual === 'clientes' ? 'ativo' : ''
             }`}
-            onClick={() => setTelaAtual('clientes')}
+            onClick={() => mudarTela('clientes')}
           >
             Clientes
           </button>
@@ -138,7 +229,7 @@ function App() {
             className={`menu-item ${
               telaAtual === 'cobrancas' ? 'ativo' : ''
             }`}
-            onClick={() => setTelaAtual('cobrancas')}
+            onClick={() => mudarTela('cobrancas')}
           >
             Cobranças
           </button>
@@ -147,7 +238,7 @@ function App() {
             className={`menu-item ${
               telaAtual === 'pagamentos' ? 'ativo' : ''
             }`}
-            onClick={() => setTelaAtual('pagamentos')}
+            onClick={() => mudarTela('pagamentos')}
           >
             Pagamentos
           </button>
@@ -156,7 +247,7 @@ function App() {
             className={`menu-item ${
               telaAtual === 'relatorios' ? 'ativo' : ''
             }`}
-            onClick={() => setTelaAtual('relatorios')}
+            onClick={() => mudarTela('relatorios')}
           >
             Relatórios
           </button>
@@ -181,7 +272,10 @@ function App() {
                 <h2>Painel de cobranças</h2>
               </div>
 
-              <button className="botao-principal">
+              <button
+                className="botao-principal"
+                onClick={() => mudarTela('cobrancas')}
+              >
                 Nova cobrança
               </button>
             </header>
@@ -209,7 +303,7 @@ function App() {
 
                 <button
                   className="botao-secundario"
-                  onClick={() => setTelaAtual('cobrancas')}
+                  onClick={() => mudarTela('cobrancas')}
                 >
                   Ver todas
                 </button>
@@ -234,6 +328,7 @@ function App() {
                         <td>{cobranca.descricao}</td>
                         <td>{cobranca.valor}</td>
                         <td>{cobranca.vencimento}</td>
+
                         <td>
                           <span
                             className={`status ${cobranca.situacao.toLowerCase()}`}
@@ -258,10 +353,105 @@ function App() {
                 <h2>Clientes</h2>
               </div>
 
-              <button className="botao-principal">
+              <button
+                className="botao-principal"
+                onClick={abrirFormularioCliente}
+              >
                 Novo cliente
               </button>
             </header>
+
+            {mensagem.texto && (
+              <div className={`mensagem-formulario ${mensagem.tipo}`}>
+                {mensagem.texto}
+              </div>
+            )}
+
+            {mostrarFormulario && (
+              <section className="formulario-card">
+                <div className="formulario-cabecalho">
+                  <div>
+                    <h3>Cadastrar cliente</h3>
+                    <p>
+                      Preencha os dados para adicionar um novo cliente.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={cadastrarCliente}>
+                  <div className="formulario-grid">
+                    <label className="campo-formulario">
+                      <span>Nome completo</span>
+
+                      <input
+                        type="text"
+                        name="nome"
+                        value={novoCliente.nome}
+                        onChange={atualizarCampoCliente}
+                        placeholder="Ex.: Fernanda Ribeiro"
+                        required
+                      />
+                    </label>
+
+                    <label className="campo-formulario">
+                      <span>CPF ou CNPJ</span>
+
+                      <input
+                        type="text"
+                        name="documento"
+                        value={novoCliente.documento}
+                        onChange={atualizarCampoCliente}
+                        placeholder="000.000.000-00"
+                        required
+                      />
+                    </label>
+
+                    <label className="campo-formulario">
+                      <span>Telefone</span>
+
+                      <input
+                        type="text"
+                        name="telefone"
+                        value={novoCliente.telefone}
+                        onChange={atualizarCampoCliente}
+                        placeholder="(61) 99999-9999"
+                        required
+                      />
+                    </label>
+
+                    <label className="campo-formulario">
+                      <span>E-mail</span>
+
+                      <input
+                        type="email"
+                        name="email"
+                        value={novoCliente.email}
+                        onChange={atualizarCampoCliente}
+                        placeholder="cliente@email.com"
+                        required
+                      />
+                    </label>
+                  </div>
+
+                  <div className="formulario-acoes">
+                    <button
+                      type="button"
+                      className="botao-cancelar"
+                      onClick={fecharFormularioCliente}
+                    >
+                      Cancelar
+                    </button>
+
+                    <button
+                      type="submit"
+                      className="botao-principal"
+                    >
+                      Salvar cliente
+                    </button>
+                  </div>
+                </form>
+              </section>
+            )}
 
             <section className="secao-tabela">
               <div className="titulo-secao">
@@ -350,7 +540,7 @@ function App() {
 
               <button
                 className="botao-principal"
-                onClick={() => setTelaAtual('painel')}
+                onClick={() => mudarTela('painel')}
               >
                 Voltar ao painel
               </button>
