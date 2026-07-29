@@ -175,6 +175,33 @@ function App() {
     })
   }
 
+  function excluirCliente(cliente) {
+    const confirmouExclusao = window.confirm(
+      `Deseja realmente excluir o cliente ${cliente.nome}?`,
+    )
+
+    if (!confirmouExclusao) {
+      return
+    }
+
+    setClientes((clientesAtuais) =>
+      clientesAtuais.filter(
+        (clienteAtual) => clienteAtual.id !== cliente.id,
+      ),
+    )
+
+    if (clienteEmEdicao === cliente.id) {
+      setNovoCliente(clienteVazio)
+      setClienteEmEdicao(null)
+      setMostrarFormulario(false)
+    }
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Cliente excluído com sucesso!',
+    })
+  }
+
   function salvarCliente(evento) {
     evento.preventDefault()
 
@@ -415,19 +442,17 @@ function App() {
             {mostrarFormulario && (
               <section className="formulario-card">
                 <div className="formulario-cabecalho">
-                  <div>
-                    <h3>
-                      {clienteEmEdicao !== null
-                        ? 'Editar cliente'
-                        : 'Cadastrar cliente'}
-                    </h3>
+                  <h3>
+                    {clienteEmEdicao !== null
+                      ? 'Editar cliente'
+                      : 'Cadastrar cliente'}
+                  </h3>
 
-                    <p>
-                      {clienteEmEdicao !== null
-                        ? 'Altere os dados do cliente selecionado.'
-                        : 'Preencha os dados para adicionar um novo cliente.'}
-                    </p>
-                  </div>
+                  <p>
+                    {clienteEmEdicao !== null
+                      ? 'Altere os dados do cliente selecionado.'
+                      : 'Preencha os dados para adicionar um novo cliente.'}
+                  </p>
                 </div>
 
                 <form onSubmit={salvarCliente}>
@@ -569,6 +594,14 @@ function App() {
                             >
                               Editar
                             </button>
+
+                            <button
+                              type="button"
+                              className="botao-acao botao-excluir"
+                              onClick={() => excluirCliente(cliente)}
+                            >
+                              Excluir
+                            </button>
                           </div>
                         </td>
                       </tr>
@@ -595,8 +628,8 @@ function App() {
               <h3>{nomesDasTelas[telaAtual]}</h3>
 
               <p>
-                Esta página será desenvolvida nas próximas etapas
-                do projeto.
+                Esta página será desenvolvida nas próximas etapas do
+                projeto.
               </p>
 
               <button

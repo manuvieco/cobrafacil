@@ -522,3 +522,11 @@ td {
     width: 100%;
   }
 }
+.botao-excluir {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.botao-excluir:hover {
+  background: #fee2e2;
+}
