@@ -113,6 +113,7 @@ function App() {
   const [mostrarFormulario, setMostrarFormulario] = useState(false)
   const [novoCliente, setNovoCliente] = useState(clienteVazio)
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
+  const [clienteSelecionado, setClienteSelecionado] = useState(null)
 
   const [mensagem, setMensagem] = useState({
     tipo: '',
@@ -130,6 +131,7 @@ function App() {
     setTelaAtual(tela)
     setMostrarFormulario(false)
     setClienteEmEdicao(null)
+    setClienteSelecionado(null)
     setNovoCliente(clienteVazio)
     limparMensagem()
   }
@@ -137,6 +139,7 @@ function App() {
   function abrirFormularioCliente() {
     setNovoCliente(clienteVazio)
     setClienteEmEdicao(null)
+    setClienteSelecionado(null)
     setMostrarFormulario(true)
     limparMensagem()
   }
@@ -157,6 +160,14 @@ function App() {
     }))
   }
 
+  function verCliente(cliente) {
+    setClienteSelecionado(cliente)
+  }
+
+  function fecharDetalhesCliente() {
+    setClienteSelecionado(null)
+  }
+
   function editarCliente(cliente) {
     setNovoCliente({
       nome: cliente.nome,
@@ -166,6 +177,7 @@ function App() {
     })
 
     setClienteEmEdicao(cliente.id)
+    setClienteSelecionado(null)
     setMostrarFormulario(true)
     limparMensagem()
 
@@ -173,6 +185,14 @@ function App() {
       top: 0,
       behavior: 'smooth',
     })
+  }
+
+  function editarClienteSelecionado() {
+    if (!clienteSelecionado) {
+      return
+    }
+
+    editarCliente(clienteSelecionado)
   }
 
   function excluirCliente(cliente) {
@@ -194,6 +214,10 @@ function App() {
       setNovoCliente(clienteVazio)
       setClienteEmEdicao(null)
       setMostrarFormulario(false)
+    }
+
+    if (clienteSelecionado?.id === cliente.id) {
+      setClienteSelecionado(null)
     }
 
     setMensagem({
@@ -280,6 +304,7 @@ function App() {
 
         <nav className="menu">
           <button
+            type="button"
             className={`menu-item ${
               telaAtual === 'painel' ? 'ativo' : ''
             }`}
@@ -289,6 +314,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={`menu-item ${
               telaAtual === 'clientes' ? 'ativo' : ''
             }`}
@@ -298,6 +324,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={`menu-item ${
               telaAtual === 'cobrancas' ? 'ativo' : ''
             }`}
@@ -307,6 +334,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={`menu-item ${
               telaAtual === 'pagamentos' ? 'ativo' : ''
             }`}
@@ -316,6 +344,7 @@ function App() {
           </button>
 
           <button
+            type="button"
             className={`menu-item ${
               telaAtual === 'relatorios' ? 'ativo' : ''
             }`}
@@ -345,6 +374,7 @@ function App() {
               </div>
 
               <button
+                type="button"
                 className="botao-principal"
                 onClick={() => mudarTela('cobrancas')}
               >
@@ -368,12 +398,14 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças recentes</h3>
+
                   <p>
                     Acompanhe as últimas movimentações cadastradas.
                   </p>
                 </div>
 
                 <button
+                  type="button"
                   className="botao-secundario"
                   onClick={() => mudarTela('cobrancas')}
                 >
@@ -426,6 +458,7 @@ function App() {
               </div>
 
               <button
+                type="button"
                 className="botao-principal"
                 onClick={abrirFormularioCliente}
               >
@@ -434,7 +467,9 @@ function App() {
             </header>
 
             {mensagem.texto && (
-              <div className={`mensagem-formulario ${mensagem.tipo}`}>
+              <div
+                className={`mensagem-formulario ${mensagem.tipo}`}
+              >
                 {mensagem.texto}
               </div>
             )}
@@ -536,13 +571,15 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Clientes cadastrados</h3>
+
                   <p>
                     Consulte os clientes registrados no sistema.
                   </p>
                 </div>
 
                 <span className="contador-clientes">
-                  {clientes.length} clientes
+                  {clientes.length}{' '}
+                  {clientes.length === 1 ? 'cliente' : 'clientes'}
                 </span>
               </div>
 
@@ -583,6 +620,7 @@ function App() {
                             <button
                               type="button"
                               className="botao-acao"
+                              onClick={() => verCliente(cliente)}
                             >
                               Ver
                             </button>
@@ -633,6 +671,7 @@ function App() {
               </p>
 
               <button
+                type="button"
                 className="botao-principal"
                 onClick={() => mudarTela('painel')}
               >
@@ -642,6 +681,92 @@ function App() {
           </>
         )}
       </main>
+
+      {clienteSelecionado && (
+        <div
+          className="modal-fundo"
+          onClick={fecharDetalhesCliente}
+        >
+          <section
+            className="modal-cliente"
+            onClick={(evento) => evento.stopPropagation()}
+          >
+            <div className="modal-cabecalho">
+              <div>
+                <p className="modal-subtitulo">
+                  Detalhes do cliente
+                </p>
+
+                <h3>{clienteSelecionado.nome}</h3>
+              </div>
+
+              <button
+                type="button"
+                className="botao-fechar-modal"
+                onClick={fecharDetalhesCliente}
+                aria-label="Fechar detalhes do cliente"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="detalhes-cliente">
+              <div className="detalhe-item">
+                <span>Código do cliente</span>
+                <strong>#{clienteSelecionado.id}</strong>
+              </div>
+
+              <div className="detalhe-item">
+                <span>Nome completo</span>
+                <strong>{clienteSelecionado.nome}</strong>
+              </div>
+
+              <div className="detalhe-item">
+                <span>CPF ou CNPJ</span>
+                <strong>{clienteSelecionado.documento}</strong>
+              </div>
+
+              <div className="detalhe-item">
+                <span>Telefone</span>
+                <strong>{clienteSelecionado.telefone}</strong>
+              </div>
+
+              <div className="detalhe-item">
+                <span>E-mail</span>
+                <strong>{clienteSelecionado.email}</strong>
+              </div>
+
+              <div className="detalhe-item">
+                <span>Situação</span>
+
+                <span
+                  className={`status ${clienteSelecionado.situacao.toLowerCase()}`}
+                >
+                  {clienteSelecionado.situacao}
+                </span>
+              </div>
+            </div>
+
+            <div className="modal-acoes">
+              <button
+                type="button"
+                className="botao-cancelar"
+                onClick={fecharDetalhesCliente}
+              >
+                Fechar
+              </button>
+
+              <button
+                type="button"
+                className="botao-principal"
+                onClick={editarClienteSelecionado}
+              >
+                Editar cliente
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   )
 }
