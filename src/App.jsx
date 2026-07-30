@@ -150,7 +150,10 @@ function App() {
   const [novaCobranca, setNovaCobranca] = useState(cobrancaVazia)
 
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
-  const [clienteSelecionado, setClienteSelecionado] = useState(null)
+  const [cobrancaEmEdicao, setCobrancaEmEdicao] = useState(null)
+
+  const [clienteSelecionado, setClienteSelecionado] =
+    useState(null)
 
   const [mensagem, setMensagem] = useState({
     tipo: '',
@@ -191,6 +194,7 @@ function App() {
     setMostrarFormularioCobranca(false)
 
     setClienteEmEdicao(null)
+    setCobrancaEmEdicao(null)
     setClienteSelecionado(null)
 
     setNovoCliente(clienteVazio)
@@ -381,14 +385,19 @@ function App() {
   function abrirFormularioCobranca() {
     setTelaAtual('cobrancas')
     setNovaCobranca(cobrancaVazia)
+    setCobrancaEmEdicao(null)
+
     setMostrarFormularioCliente(false)
     setMostrarFormularioCobranca(true)
+
     limparMensagem()
   }
 
   function fecharFormularioCobranca() {
     setNovaCobranca(cobrancaVazia)
+    setCobrancaEmEdicao(null)
     setMostrarFormularioCobranca(false)
+
     limparMensagem()
   }
 
@@ -399,6 +408,54 @@ function App() {
       ...dadosAtuais,
       [name]: value,
     }))
+  }
+
+  function editarCobranca(cobranca) {
+    setNovaCobranca({
+      clienteId: String(cobranca.clienteId),
+      descricao: cobranca.descricao,
+      valor: String(cobranca.valor),
+      vencimento: cobranca.vencimento,
+      situacao: cobranca.situacao,
+    })
+
+    setCobrancaEmEdicao(cobranca.id)
+    setMostrarFormularioCobranca(true)
+    limparMensagem()
+
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth',
+    })
+  }
+
+  function excluirCobranca(cobranca) {
+    const nomeCliente = buscarNomeCliente(cobranca.clienteId)
+
+    const confirmouExclusao = window.confirm(
+      `Deseja realmente excluir a cobrança de ${nomeCliente}?`,
+    )
+
+    if (!confirmouExclusao) {
+      return
+    }
+
+    setCobrancas((cobrancasAtuais) =>
+      cobrancasAtuais.filter(
+        (cobrancaAtual) => cobrancaAtual.id !== cobranca.id,
+      ),
+    )
+
+    if (cobrancaEmEdicao === cobranca.id) {
+      setNovaCobranca(cobrancaVazia)
+      setCobrancaEmEdicao(null)
+      setMostrarFormularioCobranca(false)
+    }
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Cobrança excluída com sucesso!',
+    })
   }
 
   function salvarCobranca(evento) {
@@ -445,8 +502,7 @@ function App() {
       return
     }
 
-    const cobrancaCadastrada = {
-      id: Date.now(),
+    const dadosDaCobranca = {
       clienteId: Number(novaCobranca.clienteId),
       descricao: novaCobranca.descricao.trim(),
       valor: valorConvertido,
@@ -454,18 +510,42 @@ function App() {
       situacao: novaCobranca.situacao,
     }
 
-    setCobrancas((cobrancasAtuais) => [
-      ...cobrancasAtuais,
-      cobrancaCadastrada,
-    ])
+    if (cobrancaEmEdicao !== null) {
+      setCobrancas((cobrancasAtuais) =>
+        cobrancasAtuais.map((cobranca) =>
+          cobranca.id === cobrancaEmEdicao
+            ? {
+                ...cobranca,
+                ...dadosDaCobranca,
+              }
+            : cobranca,
+        ),
+      )
+
+      setMensagem({
+        tipo: 'sucesso',
+        texto: 'Cobrança atualizada com sucesso!',
+      })
+    } else {
+      const cobrancaCadastrada = {
+        id: Date.now(),
+        ...dadosDaCobranca,
+      }
+
+      setCobrancas((cobrancasAtuais) => [
+        ...cobrancasAtuais,
+        cobrancaCadastrada,
+      ])
+
+      setMensagem({
+        tipo: 'sucesso',
+        texto: 'Cobrança cadastrada com sucesso!',
+      })
+    }
 
     setNovaCobranca(cobrancaVazia)
+    setCobrancaEmEdicao(null)
     setMostrarFormularioCobranca(false)
-
-    setMensagem({
-      tipo: 'sucesso',
-      texto: 'Cobrança cadastrada com sucesso!',
-    })
   }
 
   return (
@@ -586,7 +666,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças recentes</h3>
-
                   <p>
                     Acompanhe as últimas movimentações cadastradas.
                   </p>
@@ -770,7 +849,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Clientes cadastrados</h3>
-
                   <p>
                     Consulte os clientes registrados no sistema.
                   </p>
@@ -778,7 +856,9 @@ function App() {
 
                 <span className="contador-clientes">
                   {clientes.length}{' '}
-                  {clientes.length === 1 ? 'cliente' : 'clientes'}
+                  {clientes.length === 1
+                    ? 'cliente'
+                    : 'clientes'}
                 </span>
               </div>
 
@@ -886,11 +966,16 @@ function App() {
             {mostrarFormularioCobranca && (
               <section className="formulario-card">
                 <div className="formulario-cabecalho">
-                  <h3>Cadastrar cobrança</h3>
+                  <h3>
+                    {cobrancaEmEdicao !== null
+                      ? 'Editar cobrança'
+                      : 'Cadastrar cobrança'}
+                  </h3>
 
                   <p>
-                    Selecione o cliente e informe os dados da
-                    cobrança.
+                    {cobrancaEmEdicao !== null
+                      ? 'Altere os dados da cobrança selecionada.'
+                      : 'Selecione o cliente e informe os dados da cobrança.'}
                   </p>
                 </div>
 
@@ -1001,7 +1086,9 @@ function App() {
                         type="submit"
                         className="botao-principal"
                       >
-                        Salvar cobrança
+                        {cobrancaEmEdicao !== null
+                          ? 'Salvar alterações'
+                          : 'Salvar cobrança'}
                       </button>
                     </div>
                   </form>
@@ -1013,7 +1100,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças cadastradas</h3>
-
                   <p>
                     Consulte as cobranças registradas no sistema.
                   </p>
@@ -1036,6 +1122,7 @@ function App() {
                       <th>Valor</th>
                       <th>Vencimento</th>
                       <th>Situação</th>
+                      <th>Ações</th>
                     </tr>
                   </thead>
 
@@ -1059,12 +1146,36 @@ function App() {
                             {cobranca.situacao}
                           </span>
                         </td>
+
+                        <td>
+                          <div className="acoes">
+                            <button
+                              type="button"
+                              className="botao-acao"
+                              onClick={() =>
+                                editarCobranca(cobranca)
+                              }
+                            >
+                              Editar
+                            </button>
+
+                            <button
+                              type="button"
+                              className="botao-acao botao-excluir"
+                              onClick={() =>
+                                excluirCobranca(cobranca)
+                              }
+                            >
+                              Excluir
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
 
                     {cobrancas.length === 0 && (
                       <tr>
-                        <td colSpan="5" className="tabela-vazia">
+                        <td colSpan="6" className="tabela-vazia">
                           Nenhuma cobrança cadastrada.
                         </td>
                       </tr>
