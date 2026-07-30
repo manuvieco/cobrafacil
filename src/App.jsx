@@ -180,6 +180,32 @@ function App() {
 
   const cobrancasRecentes = cobrancasOrdenadas.slice(0, 4)
 
+  const totalCobrancas = cobrancas.reduce(
+    (total, cobranca) => total + Number(cobranca.valor),
+    0,
+  )
+
+  const totalRecebido = cobrancas
+    .filter((cobranca) => cobranca.situacao === 'Paga')
+    .reduce(
+      (total, cobranca) => total + Number(cobranca.valor),
+      0,
+    )
+
+  const totalPendente = cobrancas
+    .filter((cobranca) => cobranca.situacao === 'Pendente')
+    .reduce(
+      (total, cobranca) => total + Number(cobranca.valor),
+      0,
+    )
+
+  const totalVencido = cobrancas
+    .filter((cobranca) => cobranca.situacao === 'Vencida')
+    .reduce(
+      (total, cobranca) => total + Number(cobranca.valor),
+      0,
+    )
+
   function limparMensagem() {
     setMensagem({
       tipo: '',
@@ -643,22 +669,22 @@ function App() {
             <section className="resumo">
               <article className="cartao total">
                 <span>Total em cobranças</span>
-                <strong>R$ 12.500,00</strong>
+                <strong>{formatarMoeda(totalCobrancas)}</strong>
               </article>
 
               <article className="cartao recebido">
                 <span>Total recebido</span>
-                <strong>R$ 7.800,00</strong>
+                <strong>{formatarMoeda(totalRecebido)}</strong>
               </article>
 
               <article className="cartao pendente">
                 <span>Total pendente</span>
-                <strong>R$ 3.200,00</strong>
+                <strong>{formatarMoeda(totalPendente)}</strong>
               </article>
 
               <article className="cartao vencido">
                 <span>Total vencido</span>
-                <strong>R$ 1.500,00</strong>
+                <strong>{formatarMoeda(totalVencido)}</strong>
               </article>
             </section>
 
@@ -666,6 +692,7 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças recentes</h3>
+
                   <p>
                     Acompanhe as últimas movimentações cadastradas.
                   </p>
@@ -849,6 +876,7 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Clientes cadastrados</h3>
+
                   <p>
                     Consulte os clientes registrados no sistema.
                   </p>
@@ -1100,6 +1128,7 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças cadastradas</h3>
+
                   <p>
                     Consulte as cobranças registradas no sistema.
                   </p>
