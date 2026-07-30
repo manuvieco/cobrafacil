@@ -3,6 +3,7 @@ import './App.css'
 
 const CHAVE_CLIENTES = 'cobrafacil_clientes'
 const CHAVE_COBRANCAS = 'cobrafacil_cobrancas'
+const CHAVE_PAGAMENTOS = 'cobrafacil_pagamentos'
 
 const clientesIniciais = [
   {
@@ -74,6 +75,18 @@ const cobrancasIniciais = [
   },
 ]
 
+const pagamentosIniciais = [
+  {
+    id: 1,
+    cobrancaId: 2,
+    clienteId: 2,
+    valor: 520,
+    dataPagamento: '2026-07-15',
+    formaPagamento: 'Pix',
+    observacao: 'Pagamento integral.',
+  },
+]
+
 const clienteVazio = {
   nome: '',
   documento: '',
@@ -89,8 +102,14 @@ const cobrancaVazia = {
   situacao: 'Pendente',
 }
 
+const pagamentoVazio = {
+  cobrancaId: '',
+  dataPagamento: '',
+  formaPagamento: 'Pix',
+  observacao: '',
+}
+
 const nomesDasTelas = {
-  pagamentos: 'Pagamentos',
   relatorios: 'Relatórios',
 }
 
@@ -129,6 +148,30 @@ function formatarData(data) {
   return `${dia}/${mes}/${ano}`
 }
 
+function obterDataHoje() {
+  const hoje = new Date()
+  const ano = hoje.getFullYear()
+  const mes = String(hoje.getMonth() + 1).padStart(2, '0')
+  const dia = String(hoje.getDate()).padStart(2, '0')
+
+  return `${ano}-${mes}-${dia}`
+}
+
+function calcularSituacaoSemPagamento(cobranca) {
+  if (!cobranca?.vencimento) {
+    return 'Pendente'
+  }
+
+  const hoje = new Date()
+  hoje.setHours(0, 0, 0, 0)
+
+  const dataVencimento = new Date(
+    `${cobranca.vencimento}T00:00:00`,
+  )
+
+  return dataVencimento < hoje ? 'Vencida' : 'Pendente'
+}
+
 function App() {
   const [telaAtual, setTelaAtual] = useState('painel')
 
@@ -140,14 +183,23 @@ function App() {
     carregarDados(CHAVE_COBRANCAS, cobrancasIniciais),
   )
 
+  const [pagamentos, setPagamentos] = useState(() =>
+    carregarDados(CHAVE_PAGAMENTOS, pagamentosIniciais),
+  )
+
   const [mostrarFormularioCliente, setMostrarFormularioCliente] =
     useState(false)
 
   const [mostrarFormularioCobranca, setMostrarFormularioCobranca] =
     useState(false)
 
+  const [mostrarFormularioPagamento, setMostrarFormularioPagamento] =
+    useState(false)
+
   const [novoCliente, setNovoCliente] = useState(clienteVazio)
   const [novaCobranca, setNovaCobranca] = useState(cobrancaVazia)
+  const [novoPagamento, setNovoPagamento] =
+    useState(pagamentoVazio)
 
   const [clienteEmEdicao, setClienteEmEdicao] = useState(null)
   const [cobrancaEmEdicao, setCobrancaEmEdicao] = useState(null)
@@ -174,11 +226,38 @@ function App() {
     )
   }, [cobrancas])
 
+  useEffect(() => {
+    localStorage.setItem(
+      CHAVE_PAGAMENTOS,
+      JSON.stringify(pagamentos),
+    )
+  }, [pagamentos])
+
   const cobrancasOrdenadas = [...cobrancas].sort(
     (primeira, segunda) => segunda.id - primeira.id,
   )
 
+  const pagamentosOrdenados = [...pagamentos].sort(
+    (primeiro, segundo) => segundo.id - primeiro.id,
+  )
+
   const cobrancasRecentes = cobrancasOrdenadas.slice(0, 4)
+
+  const cobrancasDisponiveisPagamento = cobrancas.filter(
+    (cobranca) => {
+      const possuiPagamento = pagamentos.some(
+        (pagamento) =>
+          String(pagamento.cobrancaId) === String(cobranca.id),
+      )
+
+      return cobranca.situacao !== 'Paga' && !possuiPagamento
+    },
+  )
+
+  const cobrancaSelecionadaPagamento = cobrancas.find(
+    (cobranca) =>
+      String(cobranca.id) === String(novoPagamento.cobrancaId),
+  )
 
   const totalCobrancas = cobrancas.reduce(
     (total, cobranca) => total + Number(cobranca.valor),
@@ -218,6 +297,7 @@ function App() {
 
     setMostrarFormularioCliente(false)
     setMostrarFormularioCobranca(false)
+    setMostrarFormularioPagamento(false)
 
     setClienteEmEdicao(null)
     setCobrancaEmEdicao(null)
@@ -225,18 +305,37 @@ function App() {
 
     setNovoCliente(clienteVazio)
     setNovaCobranca(cobrancaVazia)
+    setNovoPagamento(pagamentoVazio)
 
     limparMensagem()
   }
 
-  function buscarNomeCliente(clienteId) {
-    const clienteEncontrado = clientes.find(
+  function buscarCliente(clienteId) {
+    return clientes.find(
       (cliente) => String(cliente.id) === String(clienteId),
     )
+  }
+
+  function buscarNomeCliente(clienteId) {
+    const clienteEncontrado = buscarCliente(clienteId)
 
     return clienteEncontrado
       ? clienteEncontrado.nome
       : 'Cliente não encontrado'
+  }
+
+  function buscarCobranca(cobrancaId) {
+    return cobrancas.find(
+      (cobranca) => String(cobranca.id) === String(cobrancaId),
+    )
+  }
+
+  function buscarDescricaoCobranca(cobrancaId) {
+    const cobrancaEncontrada = buscarCobranca(cobrancaId)
+
+    return cobrancaEncontrada
+      ? cobrancaEncontrada.descricao
+      : 'Cobrança não encontrada'
   }
 
   function abrirFormularioCliente() {
@@ -414,6 +513,7 @@ function App() {
     setCobrancaEmEdicao(null)
 
     setMostrarFormularioCliente(false)
+    setMostrarFormularioPagamento(false)
     setMostrarFormularioCobranca(true)
 
     limparMensagem()
@@ -423,7 +523,6 @@ function App() {
     setNovaCobranca(cobrancaVazia)
     setCobrancaEmEdicao(null)
     setMostrarFormularioCobranca(false)
-
     limparMensagem()
   }
 
@@ -456,6 +555,21 @@ function App() {
   }
 
   function excluirCobranca(cobranca) {
+    const possuiPagamento = pagamentos.some(
+      (pagamento) =>
+        String(pagamento.cobrancaId) === String(cobranca.id),
+    )
+
+    if (possuiPagamento) {
+      setMensagem({
+        tipo: 'erro',
+        texto:
+          'Esta cobrança possui um pagamento registrado. Estorne o pagamento antes de excluir a cobrança.',
+      })
+
+      return
+    }
+
     const nomeCliente = buscarNomeCliente(cobranca.clienteId)
 
     const confirmouExclusao = window.confirm(
@@ -548,6 +662,19 @@ function App() {
         ),
       )
 
+      setPagamentos((pagamentosAtuais) =>
+        pagamentosAtuais.map((pagamento) =>
+          String(pagamento.cobrancaId) ===
+          String(cobrancaEmEdicao)
+            ? {
+                ...pagamento,
+                clienteId: Number(novaCobranca.clienteId),
+                valor: valorConvertido,
+              }
+            : pagamento,
+        ),
+      )
+
       setMensagem({
         tipo: 'sucesso',
         texto: 'Cobrança atualizada com sucesso!',
@@ -572,6 +699,160 @@ function App() {
     setNovaCobranca(cobrancaVazia)
     setCobrancaEmEdicao(null)
     setMostrarFormularioCobranca(false)
+  }
+
+  function abrirFormularioPagamento() {
+    setTelaAtual('pagamentos')
+
+    setNovoPagamento({
+      ...pagamentoVazio,
+      dataPagamento: obterDataHoje(),
+    })
+
+    setMostrarFormularioCliente(false)
+    setMostrarFormularioCobranca(false)
+    setMostrarFormularioPagamento(true)
+
+    limparMensagem()
+  }
+
+  function fecharFormularioPagamento() {
+    setNovoPagamento(pagamentoVazio)
+    setMostrarFormularioPagamento(false)
+    limparMensagem()
+  }
+
+  function atualizarCampoPagamento(evento) {
+    const { name, value } = evento.target
+
+    setNovoPagamento((dadosAtuais) => ({
+      ...dadosAtuais,
+      [name]: value,
+    }))
+  }
+
+  function salvarPagamento(evento) {
+    evento.preventDefault()
+
+    const formularioIncompleto =
+      !novoPagamento.cobrancaId ||
+      !novoPagamento.dataPagamento ||
+      !novoPagamento.formaPagamento
+
+    if (formularioIncompleto) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'Preencha todos os campos obrigatórios.',
+      })
+
+      return
+    }
+
+    const cobrancaEncontrada = buscarCobranca(
+      novoPagamento.cobrancaId,
+    )
+
+    if (!cobrancaEncontrada) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'A cobrança selecionada não foi encontrada.',
+      })
+
+      return
+    }
+
+    const pagamentoJaExiste = pagamentos.some(
+      (pagamento) =>
+        String(pagamento.cobrancaId) ===
+        String(novoPagamento.cobrancaId),
+    )
+
+    if (pagamentoJaExiste) {
+      setMensagem({
+        tipo: 'erro',
+        texto: 'Esta cobrança já possui um pagamento registrado.',
+      })
+
+      return
+    }
+
+    const pagamentoCadastrado = {
+      id: Date.now(),
+      cobrancaId: cobrancaEncontrada.id,
+      clienteId: cobrancaEncontrada.clienteId,
+      valor: Number(cobrancaEncontrada.valor),
+      dataPagamento: novoPagamento.dataPagamento,
+      formaPagamento: novoPagamento.formaPagamento,
+      observacao: novoPagamento.observacao.trim(),
+    }
+
+    setPagamentos((pagamentosAtuais) => [
+      ...pagamentosAtuais,
+      pagamentoCadastrado,
+    ])
+
+    setCobrancas((cobrancasAtuais) =>
+      cobrancasAtuais.map((cobranca) =>
+        cobranca.id === cobrancaEncontrada.id
+          ? {
+              ...cobranca,
+              situacao: 'Paga',
+            }
+          : cobranca,
+      ),
+    )
+
+    setNovoPagamento(pagamentoVazio)
+    setMostrarFormularioPagamento(false)
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Pagamento registrado com sucesso!',
+    })
+  }
+
+  function estornarPagamento(pagamento) {
+    const nomeCliente = buscarNomeCliente(pagamento.clienteId)
+
+    const confirmouEstorno = window.confirm(
+      `Deseja realmente estornar o pagamento de ${nomeCliente}?`,
+    )
+
+    if (!confirmouEstorno) {
+      return
+    }
+
+    const cobrancaRelacionada = buscarCobranca(
+      pagamento.cobrancaId,
+    )
+
+    setPagamentos((pagamentosAtuais) =>
+      pagamentosAtuais.filter(
+        (pagamentoAtual) =>
+          pagamentoAtual.id !== pagamento.id,
+      ),
+    )
+
+    if (cobrancaRelacionada) {
+      const novaSituacao =
+        calcularSituacaoSemPagamento(cobrancaRelacionada)
+
+      setCobrancas((cobrancasAtuais) =>
+        cobrancasAtuais.map((cobranca) =>
+          cobranca.id === cobrancaRelacionada.id
+            ? {
+                ...cobranca,
+                situacao: novaSituacao,
+              }
+            : cobranca,
+        ),
+      )
+    }
+
+    setMensagem({
+      tipo: 'sucesso',
+      texto: 'Pagamento estornado com sucesso!',
+    })
   }
 
   return (
@@ -692,7 +973,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças recentes</h3>
-
                   <p>
                     Acompanhe as últimas movimentações cadastradas.
                   </p>
@@ -876,7 +1156,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Clientes cadastrados</h3>
-
                   <p>
                     Consulte os clientes registrados no sistema.
                   </p>
@@ -1128,7 +1407,6 @@ function App() {
               <div className="titulo-secao">
                 <div>
                   <h3>Cobranças cadastradas</h3>
-
                   <p>
                     Consulte as cobranças registradas no sistema.
                   </p>
@@ -1206,6 +1484,249 @@ function App() {
                       <tr>
                         <td colSpan="6" className="tabela-vazia">
                           Nenhuma cobrança cadastrada.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </>
+        )}
+
+        {telaAtual === 'pagamentos' && (
+          <>
+            <header className="cabecalho">
+              <div>
+                <p className="saudacao">Movimentações</p>
+                <h2>Pagamentos</h2>
+              </div>
+
+              <button
+                type="button"
+                className="botao-principal"
+                onClick={abrirFormularioPagamento}
+              >
+                Registrar pagamento
+              </button>
+            </header>
+
+            {mensagem.texto && (
+              <div
+                className={`mensagem-formulario ${mensagem.tipo}`}
+              >
+                {mensagem.texto}
+              </div>
+            )}
+
+            {mostrarFormularioPagamento && (
+              <section className="formulario-card">
+                <div className="formulario-cabecalho">
+                  <h3>Registrar pagamento</h3>
+
+                  <p>
+                    Selecione uma cobrança pendente ou vencida.
+                  </p>
+                </div>
+
+                {cobrancasDisponiveisPagamento.length === 0 ? (
+                  <div className="mensagem-formulario erro">
+                    Não existem cobranças disponíveis para pagamento.
+                  </div>
+                ) : (
+                  <form onSubmit={salvarPagamento}>
+                    <div className="formulario-grid">
+                      <label className="campo-formulario">
+                        <span>Cobrança</span>
+
+                        <select
+                          name="cobrancaId"
+                          value={novoPagamento.cobrancaId}
+                          onChange={atualizarCampoPagamento}
+                          required
+                        >
+                          <option value="">
+                            Selecione uma cobrança
+                          </option>
+
+                          {cobrancasDisponiveisPagamento.map(
+                            (cobranca) => (
+                              <option
+                                key={cobranca.id}
+                                value={cobranca.id}
+                              >
+                                {buscarNomeCliente(
+                                  cobranca.clienteId,
+                                )}{' '}
+                                — {cobranca.descricao} —{' '}
+                                {formatarMoeda(cobranca.valor)}
+                              </option>
+                            ),
+                          )}
+                        </select>
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Data do pagamento</span>
+
+                        <input
+                          type="date"
+                          name="dataPagamento"
+                          value={novoPagamento.dataPagamento}
+                          onChange={atualizarCampoPagamento}
+                          required
+                        />
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Forma de pagamento</span>
+
+                        <select
+                          name="formaPagamento"
+                          value={novoPagamento.formaPagamento}
+                          onChange={atualizarCampoPagamento}
+                          required
+                        >
+                          <option value="Pix">Pix</option>
+                          <option value="Dinheiro">Dinheiro</option>
+                          <option value="Cartão de crédito">
+                            Cartão de crédito
+                          </option>
+                          <option value="Cartão de débito">
+                            Cartão de débito
+                          </option>
+                          <option value="Transferência">
+                            Transferência
+                          </option>
+                          <option value="Boleto">Boleto</option>
+                        </select>
+                      </label>
+
+                      <label className="campo-formulario">
+                        <span>Observação</span>
+
+                        <input
+                          type="text"
+                          name="observacao"
+                          value={novoPagamento.observacao}
+                          onChange={atualizarCampoPagamento}
+                          placeholder="Ex.: Pagamento integral"
+                        />
+                      </label>
+                    </div>
+
+                    {cobrancaSelecionadaPagamento && (
+                      <div
+                        className="detalhe-item"
+                        style={{ marginTop: '20px' }}
+                      >
+                        <span>Valor que será recebido</span>
+
+                        <strong>
+                          {formatarMoeda(
+                            cobrancaSelecionadaPagamento.valor,
+                          )}
+                        </strong>
+                      </div>
+                    )}
+
+                    <div className="formulario-acoes">
+                      <button
+                        type="button"
+                        className="botao-cancelar"
+                        onClick={fecharFormularioPagamento}
+                      >
+                        Cancelar
+                      </button>
+
+                      <button
+                        type="submit"
+                        className="botao-principal"
+                      >
+                        Confirmar pagamento
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </section>
+            )}
+
+            <section className="secao-tabela">
+              <div className="titulo-secao">
+                <div>
+                  <h3>Pagamentos registrados</h3>
+
+                  <p>
+                    Consulte os recebimentos registrados no sistema.
+                  </p>
+                </div>
+
+                <span className="contador-clientes">
+                  {pagamentos.length}{' '}
+                  {pagamentos.length === 1
+                    ? 'pagamento'
+                    : 'pagamentos'}
+                </span>
+              </div>
+
+              <div className="tabela-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Cliente</th>
+                      <th>Cobrança</th>
+                      <th>Valor</th>
+                      <th>Data</th>
+                      <th>Forma</th>
+                      <th>Ações</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {pagamentosOrdenados.map((pagamento) => (
+                      <tr key={pagamento.id}>
+                        <td>
+                          <strong>
+                            {buscarNomeCliente(
+                              pagamento.clienteId,
+                            )}
+                          </strong>
+                        </td>
+
+                        <td>
+                          {buscarDescricaoCobranca(
+                            pagamento.cobrancaId,
+                          )}
+                        </td>
+
+                        <td>{formatarMoeda(pagamento.valor)}</td>
+
+                        <td>
+                          {formatarData(
+                            pagamento.dataPagamento,
+                          )}
+                        </td>
+
+                        <td>{pagamento.formaPagamento}</td>
+
+                        <td>
+                          <button
+                            type="button"
+                            className="botao-acao botao-excluir"
+                            onClick={() =>
+                              estornarPagamento(pagamento)
+                            }
+                          >
+                            Estornar
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {pagamentos.length === 0 && (
+                      <tr>
+                        <td colSpan="6" className="tabela-vazia">
+                          Nenhum pagamento registrado.
                         </td>
                       </tr>
                     )}
